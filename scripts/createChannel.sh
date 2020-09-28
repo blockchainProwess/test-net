@@ -11,13 +11,88 @@ VERBOSE="$4"
 : ${MAX_RETRY:="5"}
 : ${VERBOSE:="false"}
 
-# import utils
-# scripts/envVar.sh
-. /Users/sailekyasheral/fabric-samples/test-network/scripts/envVar.sh
+# # import utils
+# . scripts/envVar.sh
 
 if [ ! -d "channel-artifacts" ]; then
 	mkdir channel-artifacts
 fi
+
+export CORE_PEER_TLS_ENABLED=true
+export ORDERER_CA=${PWD}/organizations/ordererOrganizations/pscm.com/orderers/orderer.pscm.com/msp/tlscacerts/tlsca.pscm.com-cert.pem
+export PEER0_Producer_CA=${PWD}/organizations/peerOrganizations/Producer.pscm.com/peers/peer0.Producer.pscm.com/tls/ca.crt
+export PEER0_Processor_CA=${PWD}/organizations/peerOrganizations/Processor.pscm.com/peers/peer0.Processor.pscm.com/tls/ca.crt
+export PEER0_Distributor_CA=${PWD}/organizations/peerOrganizations/Distributor.pscm.com/peers/peer0.Distributor.pscm.com/tls/ca.crt
+export PEER0_Retailer_CA=${PWD}/organizations/peerOrganizations/Retailer.pscm.com/peers/peer0.Retailer.pscm.com/tls/ca.crt
+
+setOrdererGlobals() {
+  export CORE_PEER_LOCALMSPID="OrdererMSP"
+  export CORE_PEER_TLS_ROOTCERT_FILE=${PWD}/organizations/ordererOrganizations/pscm.com/orderers/orderer.pscm.com/msp/tlscacerts/tlsca.pscm.com-cert.pem
+  export CORE_PEER_MSPCONFIGPATH=${PWD}/organizations/ordererOrganizations/pscm.com/users/Admin@pscm.com/msp
+}
+
+setGlobals() {
+  local USING_ORG=""
+  if [ -z "$OVERRIDE_ORG" ]; then
+    USING_ORG=$1
+  else
+    USING_ORG="${OVERRIDE_ORG}"
+  fi
+  infoln "Using organization ${USING_ORG}"
+  if [ $USING_ORG -eq 1 ]; then
+    export CORE_PEER_LOCALMSPID="ProducerMSP"
+    export CORE_PEER_TLS_ROOTCERT_FILE=$PEER0_Producer_CA
+    export CORE_PEER_MSPCONFIGPATH=${PWD}/organizations/peerOrganizations/Producer.pscm.com/users/Admin@Producer.pscm.com/msp
+    export CORE_PEER_ADDRESS=localhost:7051
+  elif [ $USING_ORG -eq 2 ]; then
+    export CORE_PEER_LOCALMSPID="ProcessorMSP"
+    export CORE_PEER_TLS_ROOTCERT_FILE=$PEER0_Processor_CA
+    export CORE_PEER_MSPCONFIGPATH=${PWD}/organizations/peerOrganizations/Processor.pscm.com/users/Admin@Processor.pscm.com/msp
+    export CORE_PEER_ADDRESS=localhost:9051
+  elif [ $USING_ORG -eq 3 ]; then
+    export CORE_PEER_LOCALMSPID="DistributorMSP"
+    export CORE_PEER_TLS_ROOTCERT_FILE=$PEER0_Distributor_CA
+    export CORE_PEER_MSPCONFIGPATH=${PWD}/organizations/peerOrganizations/Distributor.pscm.com/users/Admin@Distributor.pscm.com/msp
+    export CORE_PEER_ADDRESS=localhost:6051
+  elif [ $USING_ORG -eq 4 ]; then
+    export CORE_PEER_LOCALMSPID="RetailerMSP"
+    export CORE_PEER_TLS_ROOTCERT_FILE=$PEER0_Retailer_CA
+    export CORE_PEER_MSPCONFIGPATH=${PWD}/organizations/peerOrganizations/Retailer.pscm.com/users/Admin@Retailer.pscm.com/msp
+    export CORE_PEER_ADDRESS=localhost:8051
+  else
+    errorln "ORG Unknown"
+  fi
+
+  if [ "$VERBOSE" == "true" ]; then
+    env | grep CORE
+  fi
+}
+
+parsePeerConnectionParameters() {
+
+  PEER_CONN_PARMS=""
+  PEERS=""
+  while [ "$#" -gt 0 ]; do
+    setGlobals $1
+    PEER="peer0.$1"
+    ## Set peer addresses
+    PEERS="$PEERS $PEER"
+    PEER_CONN_PARMS="$PEER_CONN_PARMS --peerAddresses $CORE_PEER_ADDRESS"
+    ## Set path to TLS certificate
+    TLSINFO=$(eval echo "--tlsRootCertFiles \$PEER0_$1_CA")
+    PEER_CONN_PARMS="$PEER_CONN_PARMS $TLSINFO"
+    # shift by one to get to the next organization
+    shift
+  done
+  # remove leading space for output
+  PEERS="$(echo -e "$PEERS" | sed -e 's/^[[:space:]]*//')"
+}
+
+verifyResult() {
+  if [ $1 -ne 0 ]; then
+    fatalln "$4"
+  fi
+}
 
 createChannelTx() {
 
@@ -47,8 +122,7 @@ createAncorPeerTx() {
 }
 
 createChannel() {
-	check
-    infoln "entered"
+    setGlobals 1
 	# Poll in case the raft leader is not set yet
 	local rc=1
 	local COUNTER=1
@@ -132,23 +206,23 @@ createChannel
 
 ## Join all the peers to the channel
 infoln "Join Org1 peers to the channel..."
-joinChannel Producer
+joinChannel 1
 infoln "Join Org2 peers to the channel..."
-joinChannel Processor
+joinChannel 2
 infoln "Join Org3 peers to the channel..."
-joinChannel Distributor
+joinChannel 3
 infoln "Join Org4 peers to the channel..."
-joinChannel Retailer
+joinChannel 4
 
 ## Set the anchor peers for each org in the channel
 infoln "Updating anchor peers for org1..."
-updateAnchorPeers Producer
+updateAnchorPeers 1
 infoln "Updating anchor peers for org2..."
-updateAnchorPeers Processor
+updateAnchorPeers 2
 infoln "Updating anchor peers for org3..."
-updateAnchorPeers Distributor
+updateAnchorPeers 3
 infoln "Updating anchor peers for org4..."
-updateAnchorPeers Retailer
+updateAnchorPeers 4
 
 successln "Channel successfully joined"
 

@@ -41,13 +41,11 @@ setGlobals() {
     export CORE_PEER_TLS_ROOTCERT_FILE=$PEER0_Processor_CA
     export CORE_PEER_MSPCONFIGPATH=${PWD}/organizations/peerOrganizations/Processor.pscm.com/users/Admin@Processor.pscm.com/msp
     export CORE_PEER_ADDRESS=localhost:9051
-
   elif [[ $USING_ORG -eq "Distributor"]]; then
     export CORE_PEER_LOCALMSPID="DistributorMSP"
     export CORE_PEER_TLS_ROOTCERT_FILE=$PEER0_Distributor_CA
     export CORE_PEER_MSPCONFIGPATH=${PWD}/organizations/peerOrganizations/Distributor.pscm.com/users/Admin@Distributor.pscm.com/msp
-    export CORE_PEER_ADDRESS=localhost:6051
-  
+    export CORE_PEER_ADDRESS=localhost:6051 
   elif [[ $USING_ORG -eq "Retailer"]]; then
     export CORE_PEER_LOCALMSPID="RetailerMSP"
     export CORE_PEER_TLS_ROOTCERT_FILE=$PEER0_Retailer_CA
