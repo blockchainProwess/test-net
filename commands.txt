@@ -1,0 +1,4 @@
+peer chaincode invoke -o orderer.pscm.com:7050 -C mychannel -n asset-transfer-basic  -c '{"Args":["InitLedger"]}' -o orderer.pscm.com:7050 --tls true --cafile /Users/sailekyasheral/fabric-samples/test-network/organizations/ordererOrganizations/pscm.com/tlsca/tlsca.pscm.com-cert.pem
+
+/opt/gopath/src/github.com/hyperledger/fabric/peer/crypto/ordererOrganizations/prod.com/orderers/orderer.prod.com/msp/tlscacerts/tlsca.prod.com-cert.pem 
+/Users/sailekyasheral/fabric-samples/test-network/organizations/ordererOrganizations/pscm.com/tlsca/tlsca.pscm.com-cert.pem
